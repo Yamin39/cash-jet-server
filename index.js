@@ -46,8 +46,8 @@ async function run() {
 
     const usersCollection = client.db("cashJetDB").collection("users");
 
-    // save users
-    app.post("/users", async (req, res) => {
+    // Register user
+    app.post("/register", async (req, res) => {
       const user = req.body;
       const isExist = await usersCollection.findOne({ email: user.email });
       if (isExist) {
@@ -81,6 +81,28 @@ async function run() {
         role: result.role,
         status: result.status,
       });
+    });
+
+    // user login
+    app.post("/login", async (req, res) => {
+      const pin = req.body.pin;
+      const user = await usersCollection.findOne({ email: req.body.email });
+      if (!user) {
+        res.send({ result: { message: "Email or Pin is wrong", isLogin: false } });
+        return;
+      }
+
+      const pinCompare = await bcrypt.compare(pin, user.pin);
+      if (!pinCompare) {
+        res.send({ result: { message: "Email or Pin is wrong", isLogin: false } });
+        return;
+      }
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "10d",
+      });
+
+      res.send({ result: { isLogin: true }, token });
     });
 
     // Send a ping to confirm a successful connection
