@@ -2,6 +2,7 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -9,6 +10,23 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(cors());
 app.use(express.json());
+const verifyToken = (req, res, next) => {
+  console.log("in verify token", req.headers?.authorization);
+
+  if (!req.headers?.authorization) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+
+  const token = req.headers?.authorization?.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6fu63x8.mongodb.net/?appName=Cluster0`;
 
@@ -33,16 +51,19 @@ async function run() {
       const user = req.body;
       const isExist = await usersCollection.findOne({ email: user.email });
       if (isExist) {
-        res.send({ message: "User already exist", insertedId: null });
+        res.send({ result: { message: "User already exist", insertedId: null } });
         return;
       }
 
-      //   const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(user.pin, 10);
       user.pin = hashedPassword;
 
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "10d",
+      });
+
       const result = await usersCollection.insertOne(user);
-      res.send(result);
+      res.send({ result, token });
     });
 
     // Send a ping to confirm a successful connection
