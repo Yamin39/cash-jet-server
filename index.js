@@ -66,6 +66,23 @@ async function run() {
       res.send({ result, token });
     });
 
+    // get auth data
+    app.get("/auth", verifyToken, async (req, res) => {
+      const email = req.decoded.email;
+      const query = { email };
+      const result = await usersCollection.findOne(query);
+
+      res.send({
+        _id: result._id,
+        name: result.name,
+        mobileNumber: result.mobileNumber,
+        email: result.email,
+        balance: result.balance,
+        role: result.role,
+        status: result.status,
+      });
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
