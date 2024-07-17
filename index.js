@@ -45,6 +45,7 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("cashJetDB").collection("users");
+    const requestsCollection = client.db("cashJetDB").collection("requests");
 
     // Register user
     app.post("/register", async (req, res) => {
@@ -149,6 +150,43 @@ async function run() {
       const update = { $set: { status } };
       const result = await usersCollection.updateOne(query, update);
       res.send(result);
+    });
+
+    // send cash in request
+    app.post("/cash-in-request", verifyToken, async (req, res) => {
+      const { email, amount, pin, requestType, timestamp } = req.body;
+      const user = await usersCollection.findOne({ email: req.decoded.email });
+      const agent = await usersCollection.findOne({ email: email });
+
+      if (!agent || agent?.role !== "agent") {
+        res.send({ result: { message: "Invalid agent email", insertedId: null } });
+        return;
+      }
+
+      if (agent.status !== "activated") {
+        res.send({ result: { message: "Agent account is not activated", insertedId: null } });
+        return;
+      }
+
+      const pinCompare = await bcrypt.compare(pin, user.pin);
+      if (!pinCompare) {
+        res.send({ result: { message: "Pin is incorrect", insertedId: null } });
+        return;
+      }
+
+      const request = {
+        userId: user?._id,
+        agentId: agent?._id,
+        userEmail: req.decoded?.email,
+        agentEmail: email,
+        amount,
+        requestType,
+        timestamp,
+        status: "pending",
+      };
+
+      const result = await requestsCollection.insertOne(request);
+      res.send({ result });
     });
 
     // Send a ping to confirm a successful connection
