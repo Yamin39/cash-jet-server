@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -80,6 +80,7 @@ async function run() {
         balance: result?.balance,
         role: result?.role,
         status: result?.status,
+        isNew: result?.isNew,
       });
     });
 
@@ -110,6 +111,16 @@ async function run() {
       const result = await usersCollection.find().toArray();
       const users = result.filter((user) => user.role !== "admin");
       res.send(users);
+    });
+
+    // update user status to blocked with patch
+    app.patch("/users/block/:id", async (req, res) => {
+      const userId = req.params?.id;
+      const { status } = req.body;
+      const query = { _id: new ObjectId(userId) };
+      const update = { $set: { status } };
+      const result = await usersCollection.updateOne(query, update);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
