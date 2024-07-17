@@ -113,7 +113,26 @@ async function run() {
       res.send(users);
     });
 
-    // update user status to blocked with patch
+    // activate user
+    app.patch("/users/activate/:id", async (req, res) => {
+      const userId = req.params?.id;
+      const { status, isNew, role, balance } = req.body;
+      const query = { _id: new ObjectId(userId) };
+      const update = { $set: { status } };
+      if (isNew) {
+        if (role === "user") {
+          update.$set.balance = balance + 40;
+          update.$set.isNew = false;
+        } else if (role === "agent") {
+          update.$set.balance = balance + 10000;
+          update.$set.isNew = false;
+        }
+      }
+      const result = await usersCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    // block user
     app.patch("/users/block/:id", async (req, res) => {
       const userId = req.params?.id;
       const { status } = req.body;
