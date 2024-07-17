@@ -73,13 +73,13 @@ async function run() {
       const result = await usersCollection.findOne(query);
 
       res.send({
-        _id: result._id,
-        name: result.name,
-        mobileNumber: result.mobileNumber,
-        email: result.email,
-        balance: result.balance,
-        role: result.role,
-        status: result.status,
+        _id: result?._id,
+        name: result?.name,
+        mobileNumber: result?.mobileNumber,
+        email: result?.email,
+        balance: result?.balance,
+        role: result?.role,
+        status: result?.status,
       });
     });
 
@@ -103,6 +103,13 @@ async function run() {
       });
 
       res.send({ result: { isLogin: true }, token });
+    });
+
+    // get users
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      const users = result.filter((user) => user.role !== "admin");
+      res.send(users);
     });
 
     // Send a ping to confirm a successful connection
