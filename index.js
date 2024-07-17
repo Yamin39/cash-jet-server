@@ -107,14 +107,23 @@ async function run() {
     });
 
     // get users
-    app.get("/users", async (req, res) => {
-      const result = await usersCollection.find().toArray();
+    app.get("/users", verifyToken, async (req, res) => {
+      const search = req.query.search;
+      const query = {};
+      if (search !== "  ") {
+        query.name = {
+          $regex: search,
+          $options: "i",
+        };
+      }
+      const cursor = usersCollection.find(query);
+      const result = await cursor.toArray();
       const users = result.filter((user) => user.role !== "admin");
       res.send(users);
     });
 
     // activate user
-    app.patch("/users/activate/:id", async (req, res) => {
+    app.patch("/users/activate/:id", verifyToken, async (req, res) => {
       const userId = req.params?.id;
       const { status, isNew, role, balance } = req.body;
       const query = { _id: new ObjectId(userId) };
@@ -133,7 +142,7 @@ async function run() {
     });
 
     // block user
-    app.patch("/users/block/:id", async (req, res) => {
+    app.patch("/users/block/:id", verifyToken, async (req, res) => {
       const userId = req.params?.id;
       const { status } = req.body;
       const query = { _id: new ObjectId(userId) };
