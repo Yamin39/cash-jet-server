@@ -197,6 +197,16 @@ async function run() {
       res.send(result);
     });
 
+    // reject request
+    app.patch("/reject-request/:id", verifyToken, async (req, res) => {
+      const transactionId = req.params?.id;
+      const { status } = req.body;
+      const query = { _id: new ObjectId(transactionId) };
+      const update = { $set: { status } };
+      const result = await transactionsCollection.updateOne(query, update);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
