@@ -207,6 +207,41 @@ async function run() {
       res.send(result);
     });
 
+    // approve request
+    app.patch("/approve-request/:id", verifyToken, async (req, res) => {
+      const transactionId = req.params?.id;
+      const { status, amount, userId, agentId, requestType } = req.body;
+
+      const query = { _id: new ObjectId(transactionId) };
+      const update = { $set: { status } };
+
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+      const agent = await usersCollection.findOne({ _id: new ObjectId(agentId) });
+
+      if (requestType === "cashIn" && agent.balance < amount) {
+        res.send({ result: { message: "Agent balance is less than amount", modifiedCount: null } });
+        return;
+      } else if (requestType === "cashOut" && user.balance < amount) {
+        res.send({ result: { message: "User balance is less than amount", modifiedCount: null } });
+        return;
+      }
+
+      if (requestType === "cashIn") {
+        const userUpdate = { $set: { balance: user.balance + amount } };
+        const agentUpdate = { $set: { balance: agent.balance - amount } };
+        await usersCollection.updateOne({ _id: new ObjectId(userId) }, userUpdate);
+        await usersCollection.updateOne({ _id: new ObjectId(agentId) }, agentUpdate);
+      } else if (requestType === "cashOut") {
+        const userUpdate = { $set: { balance: user.balance - amount } };
+        const agentUpdate = { $set: { balance: agent.balance + amount } };
+        await usersCollection.updateOne({ _id: new ObjectId(userId) }, userUpdate);
+        await usersCollection.updateOne({ _id: new ObjectId(agentId) }, agentUpdate);
+      }
+
+      const result = await transactionsCollection.updateOne(query, update);
+      res.send({ result });
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
