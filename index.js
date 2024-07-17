@@ -45,7 +45,7 @@ async function run() {
     await client.connect();
 
     const usersCollection = client.db("cashJetDB").collection("users");
-    const requestsCollection = client.db("cashJetDB").collection("requests");
+    const transactionsCollection = client.db("cashJetDB").collection("transactions");
 
     // Register user
     app.post("/register", async (req, res) => {
@@ -185,8 +185,16 @@ async function run() {
         status: "pending",
       };
 
-      const result = await requestsCollection.insertOne(request);
+      const result = await transactionsCollection.insertOne(request);
       res.send({ result });
+    });
+
+    // get pending requests for specific agent
+    app.get("/pending-requests", verifyToken, async (req, res) => {
+      const query = { agentEmail: req.decoded.email, status: "pending", requestType: req.query.requestType };
+      const cursor = transactionsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
